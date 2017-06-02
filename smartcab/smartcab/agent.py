@@ -18,6 +18,7 @@ class LearningAgent(Agent):
         self.Q = dict()          # Create a Q-table which will be a dictionary of tuples
         self.epsilon = epsilon   # Random exploration factor
         self.alpha = alpha       # Learning factor
+        print(self.epsilon)
 
         ###########
         ## TO DO ##
@@ -41,10 +42,9 @@ class LearningAgent(Agent):
         # Update epsilon using a decay function of your choice
         # Update additional class parameters as needed
         # If 'testing' is True, set epsilon and alpha to 0
-        #self.epsilon -= 0.05
-        x = 0.001 * self.t
-        #self.epsilon = math.pow(0.9, self.t)
-        self.epsilon = math.exp(-x)
+        #self.epsilon -= 0.0001
+        #self.epsilon = math.pow(0.999, self.t)
+        self.epsilon = math.exp(-0.005 * self.t)
 
         if testing == True:
             self.epsilon = 0.0
@@ -61,8 +61,7 @@ class LearningAgent(Agent):
         waypoint = self.planner.next_waypoint() # The next waypoint 
         inputs = self.env.sense(self)           # Visual input - intersection light and traffic
         deadline = self.env.get_deadline(self)  # Remaining deadline
-        print("Deadline : " + str((deadline)))
-        ########### 
+        ###########
         ## TO DO ##
         ###########
         # Set 'state' as a tuple of relevant data for the agent
@@ -86,12 +85,8 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Calculate the maximum Q-value of all actions for a given state
-        maxQ = 0.0
-        items = self.Q[state]
-        for act, qv in items:
-            if qv > maxQ:
-                maxQ = qv
-        return maxQ
+        # pythonic now?
+        return max(self.Q[state].values())
 
 
     def createQ(self, state):
@@ -103,11 +98,7 @@ class LearningAgent(Agent):
         # When learning, check if the 'state' is not in the Q-table
         # If it is not, create a new dictionary for that state
         #   Then, for each action available, set the initial Q-value to 0.0
-        if state in self.Q:
-            # state in Q-table
-            pass
-        else:
-            # state not in Q-table, initial Q-value to 0.0
+        if state not in self.Q:
             self.Q[state] = {act: 0.0 for act in self.valid_actions}
 
         return
@@ -133,10 +124,8 @@ class LearningAgent(Agent):
             action = random.choice(self.valid_actions)
             if random.random() > self.epsilon:
                 # random() [0.0, 1.0)
-                maxQv = 0.0
-                for act, qv in self.Q[state].iteritems():
-                    if qv > maxQv:
-                        action = act
+                action = random.choice([x for x, q in self.Q[state].items() if q == self.get_maxQ(state)])
+
         else:
             action = random.choice(self.valid_actions)            
         return action
@@ -152,9 +141,7 @@ class LearningAgent(Agent):
         ###########
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
-        qv = self.Q[state][action]
-        delta = self.alpha * (reward - qv)
-        self.Q[state][action] = qv + delta
+        self.Q[state][action] +=  self.alpha * (reward - self.Q[state][action])
         return
 
 
@@ -190,7 +177,7 @@ def run():
     #   learning   - set to True to force the driving agent to use Q-learning
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
-    agent = env.create_agent(LearningAgent, epsilon=1.0, alpha=0.5)
+    agent = env.create_agent(LearningAgent, learning=True, epsilon=1.0, alpha=0.5)
     
     ##############
     # Follow the driving agent
@@ -205,7 +192,7 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env, update_delay=0.01, log_metrics=True)
+    sim = Simulator(env, update_delay=0.01, log_metrics=True, optimized=True)
     
     ##############
     # Run the simulator
